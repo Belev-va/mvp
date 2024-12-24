@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - auth_service
+      - user_profile_service
+      - project_service
+    networks:
+      - app-network
+
+  auth_service:
+    build: ./auth_service
+    expose:
+      - "8000"
+    environment:
+      - SECRET_KEY=your-secret-key
+      - DATABASE_URL=postgresql://user:password@db:5432/auth_db
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  user_profile_service:
+    build: ./user_profile_service
+    expose:
+      - "8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/profile_db
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  project_service:
+    build: ./project_service
+    expose:
+      - "8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/project_db
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_MULTIPLE_DATABASES=auth_db,profile_db,project_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  redis:
+    image: redis:6
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
