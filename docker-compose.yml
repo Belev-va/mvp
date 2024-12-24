@@ -26,7 +26,7 @@ services:
       - "8000"
     environment:
       - SECRET_KEY=your-secret-key
-      - DATABASE_URL=postgresql://user:password@db:5432/auth_db
+      - DATABASE_URL=postgresql://postgres:password@db:5432/auth_db
     depends_on:
       db:
         condition: service_healthy
@@ -39,7 +39,7 @@ services:
     expose:
       - "8000"
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/profile_db
+      - DATABASE_URL=postgresql://postgres:password@db:5432/profile_db
     depends_on:
       db:
         condition: service_healthy
@@ -52,7 +52,7 @@ services:
     expose:
       - "8000"
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/project_db
+      - DATABASE_URL=postgresql://postgres:password@db:5432/project_db
     depends_on:
       db:
         condition: service_healthy
@@ -63,7 +63,6 @@ services:
   db:
     image: postgres:13-alpine
     environment:
-      - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=auth_db
     volumes:
@@ -72,7 +71,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
