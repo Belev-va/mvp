@@ -1,6 +1,9 @@
 # Build stage
 FROM node:16-alpine as build
 
+# Set Node options to increase memory limit
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 WORKDIR /app
 
 # Copy package files
