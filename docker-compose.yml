@@ -8,11 +8,17 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - auth_service
-      - user_profile_service
-      - project_service
+      db:
+        condition: service_healthy
+      auth_service:
+        condition: service_started
+      user_profile_service:
+        condition: service_started
+      project_service:
+        condition: service_started
     networks:
       - app-network
+    restart: unless-stopped
 
   auth_service:
     build: ./auth_service
@@ -22,9 +28,11 @@ services:
       - SECRET_KEY=your-secret-key
       - DATABASE_URL=postgresql://user:password@db:5432/auth_db
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   user_profile_service:
     build: ./user_profile_service
@@ -33,9 +41,11 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/profile_db
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   project_service:
     build: ./project_service
@@ -44,9 +54,11 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/project_db
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   db:
     image: postgres:13-alpine
@@ -56,6 +68,7 @@ services:
       - POSTGRES_DB=auth_db
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     networks:
       - app-network
     healthcheck:
@@ -63,6 +76,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   redis:
     image: redis:6-alpine
@@ -75,6 +89,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
@@ -88,6 +103,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
 networks:
   app-network:
