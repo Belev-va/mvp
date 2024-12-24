@@ -1,5 +1,5 @@
 # Build stage
-FROM node:16-alpine as build
+FROM node:16-alpine AS build
 
 # Set Node options to increase memory limit
 ENV NODE_OPTIONS="--max-old-space-size=4096"
@@ -15,16 +15,14 @@ RUN npm install
 # Copy all source files
 COPY . .
 
-# Set environment variables for React
-ENV NODE_ENV=production
+# Build the application
+# Note: These are public URLs, not sensitive data
 ENV REACT_APP_AUTH_API=/api/auth
 ENV REACT_APP_PROFILE_API=/api/profiles
 ENV REACT_APP_PROJECT_API=/api/projects
-
-# Build the application
 RUN npm run build
 
-# Production stage with Nginx
+# Production stage
 FROM nginx:alpine
 
 # Copy built assets from build stage

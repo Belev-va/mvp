@@ -7,12 +7,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-        reservations:
-          memory: 2G
     depends_on:
       - auth_service
       - user_profile_service
@@ -55,34 +49,50 @@ services:
       - app-network
 
   db:
-    image: postgres:13
+    image: postgres:13-alpine
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
-      - POSTGRES_MULTIPLE_DATABASES=auth_db,profile_db,project_db
+      - POSTGRES_DB=auth_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
-    image: redis:6
+    image: redis:6-alpine
     ports:
       - "6379:6379"
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:3-management-alpine
     ports:
       - "5672:5672"
       - "15672:15672"
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   app-network:
     driver: bridge
 
 volumes:
-  postgres_data:
+  db_data:
+    driver: local
