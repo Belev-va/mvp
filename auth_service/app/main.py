@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError, jwt
@@ -8,6 +8,10 @@ from typing import Optional
 from pydantic import BaseModel
 import uvicorn
 import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -19,6 +23,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Middleware для логирования запросов
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Request path: {request.url.path}")
+    logger.info(f"Request method: {request.method}")
+    logger.info(f"Request headers: {request.headers}")
+    
+    try:
+        body = await request.body()
+        logger.info(f"Request body: {body}")
+    except Exception as e:
+        logger.error(f"Error reading body: {e}")
+    
+    response = await call_next(request)
+    logger.info(f"Response status: {response.status_code}")
+    return response
 
 # Security configurations
 SECRET_KEY = "your-secret-key"  # In production, use environment variable
@@ -63,22 +84,26 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 @app.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     try:
+        logger.info(f"Login attempt for user: {form_data.username}")
+        
         # Here you would validate against your database
         # This is a simplified example
         if form_data.username != "test" or form_data.password != "test":
+            logger.warning(f"Failed login attempt for user: {form_data.username}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
+        logger.info(f"Successful login for user: {form_data.username}")
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": form_data.username}, expires_delta=access_token_expires
         )
         return {"access_token": access_token, "token_type": "bearer"}
     except Exception as e:
-        logging.error(f"Login error: {str(e)}")  # Add logging
+        logger.error(f"Login error: {str(e)}", exc_info=True)
         raise
 
 @app.get("/users/me")
