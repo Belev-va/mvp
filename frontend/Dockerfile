@@ -12,6 +12,12 @@ RUN npm install
 # Copy all source files
 COPY . .
 
+# Set environment variables for React
+ENV NODE_ENV=production
+ENV REACT_APP_AUTH_API=/api/auth
+ENV REACT_APP_PROFILE_API=/api/profiles
+ENV REACT_APP_PROJECT_API=/api/projects
+
 # Build the application
 RUN npm run build
 
