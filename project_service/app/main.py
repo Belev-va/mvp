@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
+import uuid
 
 app = FastAPI()
 
@@ -17,17 +18,22 @@ class ProjectRole(BaseModel):
     role: str
     permissions: List[str]
 
+class ProjectCreate(BaseModel):
+    title: str
+    description: str
+    budget: float
+
 class Project(BaseModel):
     project_id: str
     title: str
     description: str
-    status: ProjectStatus
+    status: ProjectStatus = ProjectStatus.DRAFT
     budget: float
-    start_date: datetime
-    end_date: datetime
-    creator_id: str
-    roles: List[ProjectRole]
-    media_files: List[str]
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    creator_id: Optional[str] = None
+    roles: List[ProjectRole] = []
+    media_files: List[str] = []
     created_at: datetime
     updated_at: datetime
 
@@ -35,11 +41,21 @@ class Project(BaseModel):
 projects = {}
 
 @app.post("/projects/", response_model=Project)
-async def create_project(project: Project):
-    if project.project_id in projects:
-        raise HTTPException(status_code=400, detail="Project already exists")
-    projects[project.project_id] = project
-    return project
+async def create_project(project: ProjectCreate):
+    now = datetime.utcnow()
+    project_id = str(uuid.uuid4())
+    
+    project_data = Project(
+        project_id=project_id,
+        title=project.title,
+        description=project.description,
+        budget=project.budget,
+        created_at=now,
+        updated_at=now
+    )
+    
+    projects[project_id] = project_data
+    return project_data
 
 @app.get("/projects/{project_id}", response_model=Project)
 async def get_project(project_id: str):
@@ -47,13 +63,25 @@ async def get_project(project_id: str):
         raise HTTPException(status_code=404, detail="Project not found")
     return projects[project_id]
 
+@app.get("/projects/", response_model=List[Project])
+async def list_projects():
+    return list(projects.values())
+
 @app.put("/projects/{project_id}", response_model=Project)
-async def update_project(project_id: str, project: Project):
+async def update_project(project_id: str, project: ProjectCreate):
     if project_id not in projects:
         raise HTTPException(status_code=404, detail="Project not found")
-    project.updated_at = datetime.utcnow()
-    projects[project_id] = project
-    return project
+    
+    existing_project = projects[project_id]
+    updated_project = existing_project.copy(update={
+        "title": project.title,
+        "description": project.description,
+        "budget": project.budget,
+        "updated_at": datetime.utcnow()
+    })
+    
+    projects[project_id] = updated_project
+    return updated_project
 
 @app.delete("/projects/{project_id}")
 async def delete_project(project_id: str):
