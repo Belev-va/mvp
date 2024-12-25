@@ -7,10 +7,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
-    environment:
-      - REACT_APP_AUTH_API=/api/auth
-      - REACT_APP_PROFILE_API=/api/profiles
-      - REACT_APP_PROJECT_API=/api/projects
     depends_on:
       db:
         condition: service_healthy
