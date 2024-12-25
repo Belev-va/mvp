@@ -1,17 +1,22 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import qs from 'qs';
 
 const AUTH_API = '/api/auth';
 
 export const login = createAsyncThunk(
   'auth/login',
   async ({ username, password }) => {
-    const params = new URLSearchParams();
-    params.append('username', username);
-    params.append('password', password);
-    params.append('grant_type', 'password');
+    const data = {
+      username,
+      password,
+      grant_type: 'password',
+      scope: '',
+      client_id: '',
+      client_secret: ''
+    };
 
-    const response = await axios.post(`${AUTH_API}/token`, params, {
+    const response = await axios.post(`${AUTH_API}/token`, qs.stringify(data), {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },

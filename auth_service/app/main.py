@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError, jwt
@@ -8,6 +8,7 @@ from typing import Optional
 from pydantic import BaseModel
 import uvicorn
 import logging
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -24,21 +25,43 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Middleware для логирования запросов
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     logger.info(f"Request path: {request.url.path}")
     logger.info(f"Request method: {request.method}")
     logger.info(f"Request headers: {request.headers}")
     
-    try:
-        body = await request.body()
-        logger.info(f"Request body: {body}")
-    except Exception as e:
-        logger.error(f"Error reading body: {e}")
+    # Read and log the request body
+    body = await request.body()
+    logger.info(f"Request body: {body}")
+    
+    # Create a new request with the same body
+    async def receive():
+        return {"type": "http.request", "body": body}
+    request._receive = receive
     
     response = await call_next(request)
+    
+    # Log response details
     logger.info(f"Response status: {response.status_code}")
+    if response.status_code >= 400:
+        logger.error(f"Error response: {response}")
+        # Try to read response body
+        try:
+            response_body = b""
+            async for chunk in response.body_iterator:
+                response_body += chunk
+            logger.error(f"Response body: {response_body.decode()}")
+            # Create a new response with the same body
+            return Response(
+                content=response_body,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.media_type
+            )
+        except Exception as e:
+            logger.error(f"Error reading response body: {e}")
+    
     return response
 
 # Security configurations
