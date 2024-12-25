@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Request, Form
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError, jwt
@@ -82,24 +82,25 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 @app.post("/token", response_model=Token)
-async def login_for_access_token(username: str = Form(...), password: str = Form(...)):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     try:
-        logger.info(f"Login attempt for user: {username}")
+        logger.info(f"Login attempt for user: {form_data.username}")
+        logger.debug(f"Request form data: {form_data}")
         
         # Here you would validate against your database
         # This is a simplified example
-        if username != "test" or password != "test":
-            logger.warning(f"Failed login attempt for user: {username}")
+        if form_data.username != "test" or form_data.password != "test":
+            logger.warning(f"Failed login attempt for user: {form_data.username}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        logger.info(f"Successful login for user: {username}")
+        logger.info(f"Successful login for user: {form_data.username}")
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": username}, expires_delta=access_token_expires
+            data={"sub": form_data.username}, expires_delta=access_token_expires
         )
         return {"access_token": access_token, "token_type": "bearer"}
     except Exception as e:
